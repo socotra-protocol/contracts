@@ -1,47 +1,29 @@
 pragma solidity ^0.8.11;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./SocotraBranchManager.sol";
 
 contract SocortaFactory {
     using Address for address;
-    address[] public branches;
 
-    mapping(address => address) issuers;
-
-    constructor() {}
-
-    modifier onlyIssuer(address contractAddress) {
-        require(msg.sender == issuers[contractAddress]);
-        _;
+    struct BranchInfo {
+        address branchAddr;
+        address parentToken;
+        address issuer;
     }
 
-    event Invoked(
-        address indexed _target,
-        uint256 indexed _value,
-        bytes _data,
-        bytes _returnValue
+    uint256 branchIds;
+
+    mapping(uint256 => BranchInfo) branches;
+
+    event SplitBranch(
+        address branchAddr,
+        address parentToken,
+        address issuer,
+        uint256 branchId
     );
 
-    /**
-     * @param _target                 Address of the smart contract to call
-     * @param _value                  Quantity of Ether to provide the call (typically 0)
-     * @param _data                   Encoded function selector and arguments
-     * @return _returnValue           Bytes encoded return value
-     */
-    function invoke(
-        address _target,
-        uint256 _value,
-        bytes calldata _data
-    ) external onlyIssuer(_target) returns (bytes memory _returnValue) {
-        _returnValue = _target.functionCallWithValue(_data, _value);
-
-        emit Invoked(_target, _value, _data, _returnValue);
-
-        return _returnValue;
-    }
+    constructor() {}
 
     function splitBranch(address parentToken, uint256 amount) public {
         SocotraBranchManager branch = new SocotraBranchManager(
@@ -49,9 +31,13 @@ contract SocortaFactory {
             msg.sender
         );
 
-        issuers[address(token)] = msg.sender;
-        branches.push(address(token));
-
-        IERC20(parentToken).transferFrom(msg.sender, address(token), amount);
+        branches[branchIds] = BranchInfo({
+            branchAddr: address(branch),
+            parentToken: parentToken,
+            issuer: msg.sender
+        });
+        IERC20(parentToken).transferFrom(msg.sender, address(branch), amount);
+        emit SplitBranch(address(branch), parentToken, msg.sender, branchIds);
+        branchIds++;
     }
 }
