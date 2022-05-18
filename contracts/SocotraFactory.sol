@@ -1,10 +1,11 @@
 pragma solidity ^0.8.11;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "./SocotraFragmentToken.sol";
+import "./SocotraBranchManager.sol";
 
-contract SocortaContoller {
+contract SocortaFactory {
     using Address for address;
     address[] public branches;
 
@@ -42,37 +43,15 @@ contract SocortaContoller {
         return _returnValue;
     }
 
-    function splitBranch(
-        address parentToken,
-        uint256 amount,
-        bool is1155,
-        uint256 tokenId
-    ) public {
-        SocotraFragmentToken token = new SocotraFragmentToken(
-            address(this),
+    function splitBranch(address parentToken, uint256 amount) public {
+        SocotraBranchManager branch = new SocotraBranchManager(
             parentToken,
-            tokenId,
-            is1155,
             msg.sender
         );
 
         issuers[address(token)] = msg.sender;
         branches.push(address(token));
 
-        if (is1155) {
-            IERC1155(parentToken).safeTransferFrom(
-                msg.sender,
-                address(token),
-                tokenId,
-                amount,
-                ""
-            );
-        } else {
-            IERC20(parentToken).transferFrom(
-                msg.sender,
-                address(token),
-                amount
-            );
-        }
+        IERC20(parentToken).transferFrom(msg.sender, address(token), amount);
     }
 }
