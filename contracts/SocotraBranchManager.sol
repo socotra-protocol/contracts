@@ -3,8 +3,16 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./SocotraLeafToken.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/IDelegateRegistry.sol";
+import "./VoteProxySigner.sol";
 
 contract SocotraBranchManager is Ownable {
+    enum ManagerState {
+        NONE,
+        PENDING,
+        INITIALIZED
+    }
+
     address parentAddress;
 
     struct Payout {
@@ -14,6 +22,11 @@ contract SocotraBranchManager is Ownable {
         bytes proof;
         bool isPaid;
     }
+
+    ManagerState managerState;
+
+    address snapshotDelegation = 0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
+    address voteProxy;
 
     uint256 public totalAllocPoint;
     uint256 registerTokens;
@@ -33,18 +46,50 @@ contract SocotraBranchManager is Ownable {
         uint256 rewardPoint;
     }
 
-    event Invoked(
-        address indexed module,
-        address indexed target,
-        uint256 indexed value,
-        bytes data
-    );
+    event ProxyRegistered(address proxy);
+    event UpdateSnapshot(address newDelegation);
+
+    event RegisterLeaf();
 
     constructor(address _parentToken, address _issuer) {
         parentAddress = _parentToken;
         _transferOwnership(_issuer);
+        managerState = ManagerState.PENDING;
     }
 
+    /// @dev create vote proxy contract
+    function registerSnapshotVoteProxy() public onlyOwner {
+        require(managerState == ManagerState.PENDING, "NOT_PENDING_STATE");
+        VoteProxySigner proxy = new VoteProxySigner(owner());
+        voteProxy = address(proxy);
+        managerState = ManagerState.INITIALIZED;
+        emit ProxyRegistered(address(proxy));
+    }
+
+    /// @dev Update snapshot delegation address
+    /// @param snapshotAddr new snapshot address
+    function changeSnapshotDelegation(address snapshotAddr) public onlyOwner {
+        snapshotDelegation = snapshotAddr;
+        emit UpdateSnapshot(snapshotAddr);
+    }
+
+    /// @dev Delegate snapshot space id
+    /// @param id snapshot space Id
+    function delegateSpace(bytes32 id) public onlyOwner {
+        require(
+            managerState == ManagerState.INITIALIZED,
+            "NOT_INITIALIZED_VOTER"
+        );
+        IDelegateRegistry(snapshotDelegation).setDelegate(
+            id,
+            snapshotDelegation
+        );
+    }
+
+    /// @dev Transfer Parent Token
+    /// @param from from address
+    /// @param target target address
+    /// @param amount amount of token
     function _parentTransfer(
         address from,
         address target,
@@ -53,7 +98,11 @@ contract SocotraBranchManager is Ownable {
         IERC20(parentAddress).transferFrom(from, target, amount);
     }
 
-    function addFragment(
+    /// @dev Transfer Parent Token
+    /// @param _rewardPoint reward allocation for address
+    /// @param _name name of subtoken
+    /// @param _symbol symbol of subtoken
+    function addLeaf(
         uint256 _rewardPoint,
         string memory _name,
         string memory _symbol
@@ -67,6 +116,10 @@ contract SocotraBranchManager is Ownable {
         leafsCount++;
     }
 
+    /// @dev Issue subtoken
+    /// @param leafIndex reward allocation for address
+    /// @param target name of subtoken
+    /// @param amount symbol of subtoken
     function issueTo(
         uint256 leafIndex,
         address target,
@@ -76,7 +129,11 @@ contract SocotraBranchManager is Ownable {
         SocotraLeafTokenV0(fragement.tokenAddress)._managerMint(target, amount);
     }
 
-    function burnFrom(
+    /// @dev Burn subtoken
+    /// @param leafIndex reward allocation for address
+    /// @param target name of subtoken
+    /// @param amount symbol of subtoken
+    function _burnFrom(
         uint256 leafIndex,
         address target,
         uint256 amount
@@ -150,7 +207,7 @@ contract SocotraBranchManager is Ownable {
     function issuePayout(uint256 payoutId) external onlyOwner {
         Payout storage payout = payouts[payoutId];
         require(payout.isPaid == false, "ALREADY_PAYOUT");
-        burnFrom(payout.leafIndex, address(this), payout.amount);
+        _burnFrom(payout.leafIndex, address(this), payout.amount);
         uint256 payoutAmount = calPayoutAmount(payout.amount);
         payout.isPaid = true;
         _parentTransfer(address(this), payout.receiver, payoutAmount);
