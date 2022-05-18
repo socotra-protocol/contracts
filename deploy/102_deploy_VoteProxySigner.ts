@@ -7,17 +7,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy, getOrNull, log } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const socotraFactory = await getOrNull("SocotraFactory");
-  if (socotraFactory) {
-    log(`reusing Socotra Factory at ${socotraFactory.address}`);
+  const voteProxySigner = await getOrNull("VoteProxySigner");
+  if (voteProxySigner) {
+    log(`reusing VoteProxySigner at ${voteProxySigner.address}`);
   } else {
     log(`deployer address: ${deployer}`);
-    await deploy("SocotraFactory", {
+    await deploy("VoteProxySigner", {
       from: deployer,
+      args: [deployer],
       log: true,
       skipIfAlreadyDeployed: true,
     });
   }
 };
 export default func;
-func.tags = ["SocotraFactory"];
+func.tags = ["VoteProxySigner"];

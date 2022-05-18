@@ -3,7 +3,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./SocotraBranchManager.sol";
 
-contract SocortaFactory {
+contract SocotraFactory {
     using Address for address;
 
     struct BranchInfo {

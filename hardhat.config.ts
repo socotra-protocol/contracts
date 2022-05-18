@@ -4,6 +4,7 @@ import { HardhatUserConfig, task } from "hardhat/config";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
+import "hardhat-deploy";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 
@@ -51,8 +52,10 @@ const config: HardhatUserConfig = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
-    mumbai: {
-      url: process.env.MUMBAI_URL || "",
+    chapel: {
+      url: "https://data-seed-prebsc-1-s1.binance.org:8545",
+      chainId: 97,
+      gasPrice: 20000000000,
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
@@ -72,6 +75,9 @@ const config: HardhatUserConfig = {
     sources: "./contracts",
     artifacts: "./build/artifacts",
     cache: "./build/cache",
+  },
+  namedAccounts: {
+    deployer: 0,
   },
 };
 
