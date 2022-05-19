@@ -37,6 +37,7 @@ contract SocotraBranchManager is Ownable {
     mapping(address => uint256) depositInfos;
     mapping(address => uint256) rewardInfos;
     uint256 totalReward;
+    uint256 totalToken;
 
     mapping(uint256 => TokenMetadata) leafs;
     uint256 leafsCount;
@@ -155,6 +156,7 @@ contract SocotraBranchManager is Ownable {
         _parentTransfer(msg.sender, address(this), depositAmount);
         depositInfos[msg.sender] += depositAmount;
         rewardInfos[msg.sender] += rewardAmount;
+        totalReward += rewardAmount;
     }
 
     function withdrawParent(uint256 withdrawAmount, uint256 rewardAmount)
