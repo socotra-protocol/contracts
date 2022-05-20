@@ -1,21 +1,24 @@
+// SPDX-License-Identifier: ISC
+
 pragma solidity ^0.8.11;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./SocotraVoteToken.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IDelegateRegistry.sol";
+import "./SocotraVoteToken.sol";
 import "./VoteProxySigner.sol";
+import "./SocotraBranchHelper.sol";
 
-contract SocotraSubdaoManager is Ownable {
+contract SocotraBranchManager is Ownable {
     enum ManagerState {
         NONE,
         PENDING,
         INITIALIZED
     }
 
-    struct SubdaoInfo {
+    struct BranchInfo {
         address parentTokenAddress;
         address voteTokenAddress;
+        string name;
         string imageUrl;
     }
 
@@ -36,7 +39,7 @@ contract SocotraSubdaoManager is Ownable {
 
     ManagerState managerState;
 
-    SubdaoInfo public subdaoInfo;
+    BranchInfo public branchInfo;
 
     address snapshotDelegation = 0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
     address voteProxy;
@@ -54,16 +57,29 @@ contract SocotraSubdaoManager is Ownable {
 
     event ProxyRegistered(address proxy);
     event UpdateSnapshot(address newDelegation);
+    event DelegateSpace(bytes32 spaceId);
 
-    event RegisterLeaf();
+    event RegisterMember(
+        address memberAddr,
+        uint256 voteAmount,
+        uint256 rewardAmount
+    );
+    event ClaimToken(address memberAddr, uint256 tokenAmount);
+    event RequestPayout(); //TODO add params
+    event WithdrawPayout(); //TODO add params
+    event IssuePayout(); //TODO add params
 
     constructor(
         address _parentToken,
         address _issuer,
+        string memory _name,
+        string memory _imageUrl,
         string memory _tokenName,
         string memory _tokenSymbol
     ) {
-        subdaoInfo.parentTokenAddress = _parentToken;
+        branchInfo.parentTokenAddress = _parentToken;
+        branchInfo.name = _name;
+        branchInfo.imageUrl = _imageUrl;
         _transferOwnership(_issuer);
         _initToken(_tokenName, _tokenSymbol);
         managerState = ManagerState.PENDING;
@@ -96,6 +112,8 @@ contract SocotraSubdaoManager is Ownable {
             id,
             snapshotDelegation
         );
+
+        emit DelegateSpace(id);
     }
 
     /// @dev Add allocation for member
@@ -107,7 +125,7 @@ contract SocotraSubdaoManager is Ownable {
         uint256 voteAmount,
         uint256 rewardAmount
     ) public onlyOwner {
-        uint256 totalParent = IERC20(subdaoInfo.parentTokenAddress).balanceOf(
+        uint256 totalParent = IERC20(branchInfo.parentTokenAddress).balanceOf(
             address(this)
         );
         require(
@@ -119,9 +137,14 @@ contract SocotraSubdaoManager is Ownable {
         member.totalToken += voteAmount;
         member.rewardAmount += rewardAmount;
         totalAllocation += rewardAmount;
+
+        emit RegisterMember(memberAddr, voteAmount, rewardAmount);
     }
 
-    //TODO add batch allocation
+    // //TODO add batch allocation
+    // function addBatchAllocation(){
+
+    // }
 
     /// @dev member claim their token allocation
     /// @param amount amount of token they want to claim
@@ -131,26 +154,27 @@ contract SocotraSubdaoManager is Ownable {
         require(amount <= member.availableToken, "EXCEED_CLAIM_LIMIT");
         member.availableToken -= amount;
         _issueTo(msg.sender, amount);
+        emit ClaimToken(msg.sender, amount);
     }
 
     /// @dev member claim their token allocation
     /// @param amount amount of token they want to claim
     function withdrawUnClaim(uint256 amount) external onlyOwner {
         require(amount > 0, "NO_WITHDRAW_UNCLAIM_ZERO");
-        uint256 totalParent = IERC20(subdaoInfo.parentTokenAddress).balanceOf(
+        uint256 totalParent = IERC20(branchInfo.parentTokenAddress).balanceOf(
             address(this)
         );
         require(amount <= totalParent - totalAllocation, "EXCEED_CLAIM_LIMIT");
         _parentTransfer(address(this), msg.sender, amount);
     }
 
-    /// @dev Initialize Subdao Vote Token
+    /// @dev Initialize Branch Vote Token
     /// @param _name name of subtoken
     /// @param _symbol symbol of subtoken
     function _initToken(string memory _name, string memory _symbol) internal {
         require(managerState == ManagerState.NONE, "NOT_IN_NONE_STATE");
         SocotraVoteToken voteToken = new SocotraVoteToken(_name, _symbol);
-        subdaoInfo.voteTokenAddress = address(voteToken);
+        branchInfo.voteTokenAddress = address(voteToken);
     }
 
     /// @dev Transfer Parent Token
@@ -162,30 +186,30 @@ contract SocotraSubdaoManager is Ownable {
         address target,
         uint256 amount
     ) internal {
-        IERC20(subdaoInfo.parentTokenAddress).transferFrom(
+        IERC20(branchInfo.parentTokenAddress).transferFrom(
             from,
             target,
             amount
         );
     }
 
-    /// @dev Transfer Subdao Token
+    /// @dev Transfer Branch Token
     /// @param from from address
     /// @param target target address
     /// @param amount amount of token
-    function _subdaoTransfer(
+    function _branchTransfer(
         address from,
         address target,
         uint256 amount
     ) internal {
-        IERC20(subdaoInfo.voteTokenAddress).transferFrom(from, target, amount);
+        IERC20(branchInfo.voteTokenAddress).transferFrom(from, target, amount);
     }
 
     /// @dev Issue subtoken
     /// @param target name of subtoken
     /// @param amount symbol of subtoken
     function _issueTo(address target, uint256 amount) internal {
-        SocotraVoteToken(subdaoInfo.voteTokenAddress)._managerMint(
+        SocotraVoteToken(branchInfo.voteTokenAddress)._managerMint(
             target,
             amount
         );
@@ -195,7 +219,7 @@ contract SocotraSubdaoManager is Ownable {
     /// @param target name of subtoken
     /// @param amount symbol of subtoken
     function _burnFrom(address target, uint256 amount) internal {
-        SocotraVoteToken(subdaoInfo.voteTokenAddress)._managerBurn(
+        SocotraVoteToken(branchInfo.voteTokenAddress)._managerBurn(
             target,
             amount
         );
@@ -213,7 +237,7 @@ contract SocotraSubdaoManager is Ownable {
             "EXCEED_TOTAL"
         );
         member.claimingToken += amount;
-        _subdaoTransfer(msg.sender, address(this), amount);
+        _branchTransfer(msg.sender, address(this), amount);
         payouts[payoutCount] = Payout({
             amount: amount,
             issuer: msg.sender,
@@ -229,7 +253,7 @@ contract SocotraSubdaoManager is Ownable {
         require(payout.isPaid == false, "ALREADY_PAYOUT");
         payout.isPaid = true;
         member.claimingToken -= payout.amount;
-        _subdaoTransfer(address(this), payout.receiver, payout.amount);
+        _branchTransfer(address(this), payout.receiver, payout.amount);
     }
 
     function issuePayout(uint256 payoutId) public onlyOwner {
@@ -238,7 +262,7 @@ contract SocotraSubdaoManager is Ownable {
         _burnFrom(address(this), payout.amount);
         MemberInfo storage member = members[payout.issuer];
 
-        uint256 payoutAmount = calPayoutAmount(
+        uint256 payoutAmount = SocotraBranchHelper.calPayoutAmount(
             payout.amount,
             member.totalToken,
             member.rewardAmount
@@ -250,16 +274,9 @@ contract SocotraSubdaoManager is Ownable {
     }
 
     function batchIssuePayout(uint256[] memory payoutIds) public onlyOwner {
+        require(payoutIds.length < 10, "EXCEED_PAYOUT_LIMIT");
         for (uint256 i = 0; i < payoutIds.length; i++) {
             issuePayout(payoutIds[i]);
         }
-    }
-
-    function calPayoutAmount(
-        uint256 claimAmount,
-        uint256 totalMemberToken,
-        uint256 totalMemberReward
-    ) public pure returns (uint256) {
-        return (claimAmount * totalMemberReward) / totalMemberToken;
     }
 }

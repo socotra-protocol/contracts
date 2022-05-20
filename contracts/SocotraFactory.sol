@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: ISC
+
 pragma solidity ^0.8.11;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "./SocotraSubdaoManager.sol";
+
+import "./SocotraBranchManager.sol";
 
 contract SocortaFactory {
     using Address for address;
@@ -30,20 +33,26 @@ contract SocortaFactory {
     /// @dev create new branch for splint up subdao
     /// @param parentToken address of ERC20 token
     /// @param amount initial amount of parent token
-    /// @param name name of subdao token
-    /// @param symbol symbol of subdao token
+    /// @param name name of subdao
+    /// @param imageUrl link to url of subdao's image
+    /// @param tokenName name of subdao token
+    /// @param tokenSymbol symbol of subdao token
     function splitBranch(
         address parentToken,
         uint256 amount,
         string memory name,
-        string memory symbol
-    ) public {
+        string memory imageUrl,
+        string memory tokenName,
+        string memory tokenSymbol
+    ) public returns (address) {
         require(amount > MIN_ISSUE_AMOUNT, "MUST_GREATER_THAN_MINIMUM");
-        SocotraSubdaoManager branch = new SocotraSubdaoManager(
+        SocotraBranchManager branch = new SocotraBranchManager(
             parentToken,
             msg.sender,
             name,
-            symbol
+            imageUrl,
+            tokenName,
+            tokenSymbol
         );
 
         branches[branchIds] = BranchInfo({
@@ -60,5 +69,6 @@ contract SocortaFactory {
             branchIds
         );
         branchIds++;
+        return address(branch);
     }
 }
