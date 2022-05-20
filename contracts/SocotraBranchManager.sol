@@ -78,7 +78,7 @@ contract SocotraBranchManager is Ownable {
         bytes proof
     );
     event WithdrawPayout(uint256 id);
-    event IssuePayout(uint256 id); //TODO add params
+    event IssuePayout(uint256 id);
 
     function init(
         address _parentToken,
