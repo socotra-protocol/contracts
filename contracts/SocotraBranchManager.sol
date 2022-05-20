@@ -28,6 +28,12 @@ contract SocotraBranchManager is Ownable {
         uint256 rewardAmount;
     }
 
+    struct AllocationInput {
+        address memberAddr;
+        uint256 voteAmount;
+        uint256 rewardAmount;
+    }
+
     struct Payout {
         uint256 amount;
         address issuer;
@@ -147,10 +153,20 @@ contract SocotraBranchManager is Ownable {
         emit RegisterMember(memberAddr, voteAmount, rewardAmount);
     }
 
-    // //TODO add batch allocation
-    // function addBatchAllocation(){
-
-    // }
+    /// @dev Batch add member allocation
+    function addBatchAllocation(AllocationInput[] memory inputArr)
+        external
+        onlyOwner
+    {
+        require(inputArr.length < 10, "EXCEED_BATCH_LIMIT");
+        for (uint256 i = 0; i < inputArr.length; i++) {
+            addMemberAllocation(
+                inputArr[i].memberAddr,
+                inputArr[i].voteAmount,
+                inputArr[i].rewardAmount
+            );
+        }
+    }
 
     /// @dev member claim their token allocation
     /// @param amount amount of token they want to claim
@@ -231,6 +247,10 @@ contract SocotraBranchManager is Ownable {
         );
     }
 
+    /// @dev Request payout for member
+    /// @param amount amount of vote token
+    /// @param receiver receiver address
+    /// @param proof proof of task such as link to evidence
     function requestPayout(
         uint256 amount,
         address receiver,
@@ -255,6 +275,8 @@ contract SocotraBranchManager is Ownable {
         payoutCount++;
     }
 
+    /// @dev Withdraw the payout
+    /// @param payoutId id of requested payout
     function withdrawPayout(uint256 payoutId) external {
         MemberInfo storage member = members[msg.sender];
         Payout storage payout = payouts[payoutId];
@@ -265,6 +287,8 @@ contract SocotraBranchManager is Ownable {
         emit WithdrawPayout(payoutId);
     }
 
+    /// @dev Subdao owner confirm to send fund to member
+    /// @param payoutId id of requested payout
     function issuePayout(uint256 payoutId) public onlyOwner {
         Payout storage payout = payouts[payoutId];
         require(payout.isPaid == false, "ALREADY_PAYOUT");
@@ -283,6 +307,7 @@ contract SocotraBranchManager is Ownable {
         emit IssuePayout(payoutId);
     }
 
+    /// @dev Batch issue payout
     function batchIssuePayout(uint256[] memory payoutIds) public onlyOwner {
         require(payoutIds.length < 10, "EXCEED_PAYOUT_LIMIT");
         for (uint256 i = 0; i < payoutIds.length; i++) {

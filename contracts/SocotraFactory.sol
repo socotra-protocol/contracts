@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./SocotraBranchManager.sol";
 
-contract SocortaFactory {
+contract SocotraFactory {
     using Address for address;
     address immutable socotraBranchManagerImplementation;
     struct BranchInfo {

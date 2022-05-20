@@ -37,33 +37,7 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        version: "0.7.6",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 10000,
-          },
-        },
-      },
-      {
-        version: "0.6.12",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 10000,
-          },
-        },
-      },
-      {
-        version: "0.5.16",
-      },
-      {
-        version: "0.6.0",
-      },
-      { version: "0.8.0" },
-      { version: "0.8.6" },
-      {
-        version: "0.8.9",
+        version: "0.8.7",
         settings: {
           optimizer: {
             enabled: true,
@@ -83,6 +57,18 @@ const config: HardhatUserConfig = {
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",
+  },
+  namedAccounts: {
+    deployer: {
+      default: 0, // here this will by default take the first account as deployer
+      1: 0, // similarly on mainnet it will take the first account as deployer. Note though that depending on how hardhat network are configured, the account 0 on one network can be different than on another
+      42161: 0,
+    },
+    libraryDeployer: {
+      default: 0, // use a different account for deploying libraries on the hardhat network
+      1: 0, // use the same address as the main deployer on mainnet
+      42161: 0, // use the same address on arbitrum mainnet
+    },
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
