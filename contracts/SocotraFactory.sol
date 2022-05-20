@@ -3,12 +3,12 @@
 pragma solidity ^0.8.11;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-
+import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./SocotraBranchManager.sol";
 
 contract SocortaFactory {
     using Address for address;
-
+    address immutable socotraBranchManagerImplementation;
     struct BranchInfo {
         address branchAddr;
         address parentToken;
@@ -28,7 +28,11 @@ contract SocortaFactory {
         uint256 branchId
     );
 
-    constructor() {}
+    constructor() {
+        socotraBranchManagerImplementation = address(
+            new SocotraBranchManager()
+        );
+    }
 
     /// @dev create new branch for splint up subdao
     /// @param parentToken address of ERC20 token
@@ -46,7 +50,10 @@ contract SocortaFactory {
         string memory tokenSymbol
     ) public returns (address) {
         require(amount > MIN_ISSUE_AMOUNT, "MUST_GREATER_THAN_MINIMUM");
-        SocotraBranchManager branch = new SocotraBranchManager(
+        SocotraBranchManager branch = SocotraBranchManager(
+            Clones.clone(socotraBranchManagerImplementation)
+        );
+        branch.init(
             parentToken,
             msg.sender,
             name,

@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IDelegateRegistry.sol";
 import "./SocotraVoteToken.sol";
 import "./VoteProxySigner.sol";
-import "./SocotraBranchHelper.sol";
 
 contract SocotraBranchManager is Ownable {
     enum ManagerState {
@@ -65,18 +64,25 @@ contract SocotraBranchManager is Ownable {
         uint256 rewardAmount
     );
     event ClaimToken(address memberAddr, uint256 tokenAmount);
-    event RequestPayout(); //TODO add params
-    event WithdrawPayout(); //TODO add params
-    event IssuePayout(); //TODO add params
+    event RequestPayout(
+        uint256 id,
+        uint256 amount,
+        address issuer,
+        address receiver,
+        bytes proof
+    );
+    event WithdrawPayout(uint256 id);
+    event IssuePayout(uint256 id); //TODO add params
 
-    constructor(
+    function init(
         address _parentToken,
         address _issuer,
         string memory _name,
         string memory _imageUrl,
         string memory _tokenName,
         string memory _tokenSymbol
-    ) {
+    ) external {
+        require(managerState == ManagerState.NONE, "Already initialized!");
         branchInfo.parentTokenAddress = _parentToken;
         branchInfo.name = _name;
         branchInfo.imageUrl = _imageUrl;
@@ -245,6 +251,8 @@ contract SocotraBranchManager is Ownable {
             proof: proof,
             isPaid: false
         });
+        emit RequestPayout(payoutCount, amount, msg.sender, receiver, proof);
+        payoutCount++;
     }
 
     function withdrawPayout(uint256 payoutId) external {
@@ -254,6 +262,7 @@ contract SocotraBranchManager is Ownable {
         payout.isPaid = true;
         member.claimingToken -= payout.amount;
         _branchTransfer(address(this), payout.receiver, payout.amount);
+        emit WithdrawPayout(payoutId);
     }
 
     function issuePayout(uint256 payoutId) public onlyOwner {
@@ -262,7 +271,7 @@ contract SocotraBranchManager is Ownable {
         _burnFrom(address(this), payout.amount);
         MemberInfo storage member = members[payout.issuer];
 
-        uint256 payoutAmount = SocotraBranchHelper.calPayoutAmount(
+        uint256 payoutAmount = calPayoutAmount(
             payout.amount,
             member.totalToken,
             member.rewardAmount
@@ -271,6 +280,7 @@ contract SocotraBranchManager is Ownable {
         member.claimingToken -= payout.amount;
         payout.isPaid = true;
         _parentTransfer(address(this), payout.receiver, payoutAmount);
+        emit IssuePayout(payoutId);
     }
 
     function batchIssuePayout(uint256[] memory payoutIds) public onlyOwner {
@@ -278,5 +288,13 @@ contract SocotraBranchManager is Ownable {
         for (uint256 i = 0; i < payoutIds.length; i++) {
             issuePayout(payoutIds[i]);
         }
+    }
+
+    function calPayoutAmount(
+        uint256 claimAmount,
+        uint256 totalMemberToken,
+        uint256 totalMemberReward
+    ) public pure returns (uint256) {
+        return (claimAmount * totalMemberReward) / totalMemberToken;
     }
 }
