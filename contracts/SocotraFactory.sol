@@ -1,7 +1,7 @@
 pragma solidity ^0.8.11;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "./SocotraBranchManager.sol";
+import "./SocotraSubdaoManager.sol";
 
 contract SocortaFactory {
     using Address for address;
@@ -30,11 +30,20 @@ contract SocortaFactory {
     /// @dev create new branch for splint up subdao
     /// @param parentToken address of ERC20 token
     /// @param amount initial amount of parent token
-    function splitBranch(address parentToken, uint256 amount) public {
+    /// @param name name of subdao token
+    /// @param symbol symbol of subdao token
+    function splitBranch(
+        address parentToken,
+        uint256 amount,
+        string memory name,
+        string memory symbol
+    ) public {
         require(amount > MIN_ISSUE_AMOUNT, "MUST_GREATER_THAN_MINIMUM");
-        SocotraBranchManager branch = new SocotraBranchManager(
+        SocotraSubdaoManager branch = new SocotraSubdaoManager(
             parentToken,
-            msg.sender
+            msg.sender,
+            name,
+            symbol
         );
 
         branches[branchIds] = BranchInfo({
