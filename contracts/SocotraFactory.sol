@@ -1,11 +1,14 @@
+// SPDX-License-Identifier: ISC
+
 pragma solidity ^0.8.11;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./SocotraBranchManager.sol";
 
-contract SocortaFactory {
+contract SocotraFactory {
     using Address for address;
-
+    address immutable socotraBranchManagerImplementation;
     struct BranchInfo {
         address branchAddr;
         address parentToken;
@@ -25,16 +28,38 @@ contract SocortaFactory {
         uint256 branchId
     );
 
-    constructor() {}
+    constructor() {
+        socotraBranchManagerImplementation = address(
+            new SocotraBranchManager()
+        );
+    }
 
     /// @dev create new branch for splint up subdao
     /// @param parentToken address of ERC20 token
     /// @param amount initial amount of parent token
-    function splitBranch(address parentToken, uint256 amount) public {
+    /// @param name name of subdao
+    /// @param imageUrl link to url of subdao's image
+    /// @param tokenName name of subdao token
+    /// @param tokenSymbol symbol of subdao token
+    function splitBranch(
+        address parentToken,
+        uint256 amount,
+        string memory name,
+        string memory imageUrl,
+        string memory tokenName,
+        string memory tokenSymbol
+    ) public returns (address) {
         require(amount > MIN_ISSUE_AMOUNT, "MUST_GREATER_THAN_MINIMUM");
-        SocotraBranchManager branch = new SocotraBranchManager(
+        SocotraBranchManager branch = SocotraBranchManager(
+            Clones.clone(socotraBranchManagerImplementation)
+        );
+        branch.init(
             parentToken,
-            msg.sender
+            msg.sender,
+            name,
+            imageUrl,
+            tokenName,
+            tokenSymbol
         );
 
         branches[branchIds] = BranchInfo({
@@ -51,5 +76,6 @@ contract SocortaFactory {
             branchIds
         );
         branchIds++;
+        return address(branch);
     }
 }
