@@ -120,10 +120,7 @@ contract SocotraBranchManager is Ownable {
             managerState == ManagerState.INITIALIZED,
             "NOT_INITIALIZED_VOTER"
         );
-        IDelegateRegistry(snapshotDelegation).setDelegate(
-            id,
-            snapshotDelegation
-        );
+        IDelegateRegistry(snapshotDelegation).setDelegate(id, voteProxy);
 
         emit DelegateSpace(id);
     }
