@@ -20,12 +20,10 @@ const setup = deployments.createFixture(async () => {
   }
 });
 describe("SocotraFactory", function () {
-  it("", async function () {
+  it("can split branch", async function () {
     const result = await setup();
     const deployer = result?.deployer;
     const socotraFactory = result?.SocotraFactory;
-    // await expect(users[0].GreetingsRegistry.setMessage(testMessage))
-    //   .to.emit(GreetingsRegistry, "MessageChanged")
-    //   .withArgs(users[0].address, testMessage);
+    await socotraFactory?.splitBranch();
   });
 });
