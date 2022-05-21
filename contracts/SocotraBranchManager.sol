@@ -134,6 +134,7 @@ contract SocotraBranchManager is Ownable {
         uint256 voteAmount,
         uint256 rewardAmount
     ) public onlyOwner {
+        require(voteAmount > 0, "NON_ZERO_AMOUNT");
         uint256 totalParent = IERC20(branchInfo.parentTokenAddress).balanceOf(
             address(this)
         );
@@ -216,7 +217,7 @@ contract SocotraBranchManager is Ownable {
     /// @param from from address
     /// @param target target address
     /// @param amount amount of token
-    function _branchTransfer(
+    function _voteTransfer(
         address from,
         address target,
         uint256 amount
@@ -253,14 +254,14 @@ contract SocotraBranchManager is Ownable {
         address receiver,
         bytes memory proof
     ) external {
-        require(amount > 0, "NO_ZERO_PAYPOUT");
+        require(amount > 0, "NON_ZERO_AMOUNT");
         MemberInfo storage member = members[msg.sender];
         require(
             amount + member.claimingToken <= member.totalToken,
             "EXCEED_TOTAL"
         );
         member.claimingToken += amount;
-        _branchTransfer(msg.sender, address(this), amount);
+        _voteTransfer(msg.sender, address(this), amount);
         payouts[payoutCount] = Payout({
             amount: amount,
             issuer: msg.sender,
@@ -280,7 +281,7 @@ contract SocotraBranchManager is Ownable {
         require(payout.isPaid == false, "ALREADY_PAYOUT");
         payout.isPaid = true;
         member.claimingToken -= payout.amount;
-        _branchTransfer(address(this), payout.receiver, payout.amount);
+        _voteTransfer(address(this), payout.receiver, payout.amount);
         emit WithdrawPayout(payoutId);
     }
 

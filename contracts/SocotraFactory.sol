@@ -8,7 +8,7 @@ import "./SocotraBranchManager.sol";
 
 contract SocotraFactory {
     using Address for address;
-    address immutable socotraBranchManagerImplementation;
+    address public immutable socotraBranchManagerImplementation;
     struct BranchInfo {
         address branchAddr;
         address parentToken;
