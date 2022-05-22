@@ -38,7 +38,7 @@ contract SocotraBranchManager is Ownable {
         uint256 amount;
         address issuer;
         address receiver;
-        bytes proof;
+        string proof;
         bool isPaid;
     }
 
@@ -75,7 +75,7 @@ contract SocotraBranchManager is Ownable {
         uint256 amount,
         address issuer,
         address receiver,
-        bytes proof
+        string proof
     );
     event WithdrawPayout(uint256 id);
     event IssuePayout(uint256 id);
@@ -252,7 +252,7 @@ contract SocotraBranchManager is Ownable {
     function requestPayout(
         uint256 amount,
         address receiver,
-        bytes memory proof
+        string memory proof
     ) external {
         require(amount > 0, "NON_ZERO_AMOUNT");
         MemberInfo storage member = members[msg.sender];
