@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/governance/IGovernor.sol";
 
 interface Iauction {
     function isWinningSignature(bytes32 _hash, bytes memory _signature)
@@ -10,13 +11,32 @@ interface Iauction {
 }
 
 contract VoteProxySigner is Ownable, Iauction {
+    enum VoterState {
+        NONE,
+        INITIALIZED
+    }
+
+    VoterState voterState;
+
     mapping(address => bool) public voter;
 
     event UpdateVoter(address member, bool approval);
 
-    constructor(address issuer) {
+    function init(address _owner, address _issuer) external {
+        require(voterState == VoterState.NONE);
+        _transferOwnership(_owner);
         voter[msg.sender] = true;
-        voter[issuer] = true;
+        voter[_issuer] = true;
+        voterState = VoterState.INITIALIZED;
+    }
+
+    function bravoCastVote(
+        address governor,
+        uint256 proposalId,
+        uint8 support
+    ) public {
+        require(voter[msg.sender] = true);
+        IGovernor(governor).castVote(proposalId, support);
     }
 
     function modifyTeam(address _member, bool _approval) public onlyOwner {
