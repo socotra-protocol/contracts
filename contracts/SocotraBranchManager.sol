@@ -337,6 +337,7 @@ contract SocotraBranchManager is Ownable {
         );
         member.rewardAmount -= payoutAmount;
         member.claimingToken -= payout.amount;
+        member.totalToken -= payout.amount;
         payout.isPaid = true;
         _parentTransfer(address(this), payout.receiver, payoutAmount);
         emit IssuePayout(payoutId);

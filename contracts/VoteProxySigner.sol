@@ -2,6 +2,7 @@
 pragma solidity ^0.8.7;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/governance/IGovernor.sol";
+import "./interfaces/IAaveGovernanceV2.sol";
 
 interface Iauction {
     function isWinningSignature(bytes32 _hash, bytes memory _signature)
@@ -28,6 +29,20 @@ contract VoteProxySigner is Ownable, Iauction {
         voter[msg.sender] = true;
         voter[_issuer] = true;
         voterState = VoterState.INITIALIZED;
+    }
+
+    /**
+     * @dev To support submit vote interface
+     * @param proposalId id of the proposal
+     * @param support boolean, true = vote for, false = vote against
+     **/
+    function submitVote(
+        address governor,
+        uint256 proposalId,
+        bool support
+    ) public {
+        require(voter[msg.sender] = true);
+        IAaveGovernanceV2(governor).submitVote(proposalId, support);
     }
 
     function bravoCastVote(
