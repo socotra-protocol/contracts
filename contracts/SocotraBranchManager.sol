@@ -11,7 +11,8 @@ contract SocotraBranchManager is Ownable {
     enum ManagerState {
         NONE,
         PENDING,
-        INITIALIZED
+        READY_OFF_CHAIN,
+        READY_ON_CHAIN
     }
 
     struct BranchInfo {
@@ -97,12 +98,34 @@ contract SocotraBranchManager is Ownable {
         managerState = ManagerState.PENDING;
     }
 
+    function delegatesParentBySig(
+        uint256 nonce,
+        uint256 expiry,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external onlyOwner {
+        require(
+            managerState == ManagerState.READY_OFF_CHAIN,
+            "NOT_INITIALIZED_STATE"
+        );
+        ERC20Votes(branchInfo.parentTokenAddress).delegateBySig(
+            voteProxy,
+            nonce,
+            expiry,
+            v,
+            r,
+            s
+        );
+        managerState = ManagerState.READY_ON_CHAIN;
+    }
+
     /// @dev create vote proxy contract
     function registerSnapshotVoteProxy() public onlyOwner {
         require(managerState == ManagerState.PENDING, "NOT_PENDING_STATE");
         VoteProxySigner proxy = new VoteProxySigner(owner());
         voteProxy = address(proxy);
-        managerState = ManagerState.INITIALIZED;
+        managerState = ManagerState.READY_OFF_CHAIN;
         emit ProxyRegistered(address(proxy));
     }
 
@@ -115,14 +138,25 @@ contract SocotraBranchManager is Ownable {
 
     /// @dev Delegate snapshot space id
     /// @param id snapshot space Id
-    function delegateSpace(bytes32 id) public onlyOwner {
+    function delegateSpace(bytes32 id) external onlyOwner {
         require(
-            managerState == ManagerState.INITIALIZED,
+            uint8(managerState) >= uint8(ManagerState.READY_OFF_CHAIN),
             "NOT_INITIALIZED_VOTER"
         );
         IDelegateRegistry(snapshotDelegation).setDelegate(id, voteProxy);
 
         emit DelegateSpace(id);
+    }
+
+    /// @dev Delegate snapshot space id
+    /// @param member voter address
+    /// @param approval permission for voter
+    function updateSigner(address member, bool approval) external onlyOwner {
+        require(
+            uint8(managerState) >= uint8(ManagerState.READY_OFF_CHAIN),
+            "NOT_INITIALIZED_VOTER"
+        );
+        VoteProxySigner(voteProxy).modifyTeam(member, approval);
     }
 
     /// @dev Add allocation for member

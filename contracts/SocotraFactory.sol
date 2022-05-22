@@ -5,6 +5,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./SocotraBranchManager.sol";
+import "./VoteProxySigner.sol";
+import "./SocotravoteToken.sol";
 
 contract SocotraFactory {
     using Address for address;
@@ -78,4 +80,6 @@ contract SocotraFactory {
         branchIds++;
         return address(branch);
     }
+
+    function createVoteProxy() public {}
 }
