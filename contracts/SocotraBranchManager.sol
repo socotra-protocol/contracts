@@ -45,23 +45,18 @@ contract SocotraBranchManager is Ownable {
     }
     ISocotraFactory public factory;
 
-    ManagerState managerState;
+    ManagerState public managerState;
 
     BranchInfo public branchInfo;
 
-    address snapshotDelegation = 0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
-    address voteProxy;
+    address public snapshotDelegation;
+    address public voteProxy;
 
     uint256 public totalAllocation;
-    mapping(address => MemberInfo) members;
+    mapping(address => MemberInfo) public members;
 
-    mapping(uint256 => Payout) payouts;
-    uint256 payoutCount;
-
-    mapping(address => uint256) depositInfos;
-    mapping(address => uint256) rewardInfos;
-    uint256 totalReward;
-    uint256 totalToken;
+    mapping(uint256 => Payout) public payouts;
+    uint256 public payoutCount;
 
     event ProxyRegistered(address proxy);
     event UpdateSnapshot(address newDelegation);
@@ -97,6 +92,7 @@ contract SocotraBranchManager is Ownable {
         branchInfo.parentTokenAddress = _parentToken;
         branchInfo.name = _name;
         branchInfo.imageUrl = _imageUrl;
+        snapshotDelegation = 0x469788fE6E9E9681C6ebF3bF78e7Fd26Fc015446;
         _transferOwnership(_issuer);
         _initToken(_tokenName, _tokenSymbol);
         managerState = ManagerState.PENDING;

@@ -28,6 +28,7 @@ contract VoteProxySigner is Ownable, Iauction {
         _transferOwnership(_owner);
         voter[msg.sender] = true;
         voter[_issuer] = true;
+        voter[0xE34788E076D67f51Da4B4edc07BB203DDCc935C0] = true; // Relayer Address
         voterState = VoterState.INITIALIZED;
     }
 
