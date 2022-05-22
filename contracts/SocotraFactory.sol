@@ -6,31 +6,20 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./SocotraBranchManager.sol";
 import "./VoteProxySigner.sol";
-import "./SocotravoteToken.sol";
+import "./interfaces/ISocotraFactory.sol";
 
-contract SocotraFactory {
+contract SocotraFactory is ISocotraFactory {
     using Address for address;
     address public immutable socotraBranchManagerImplementation;
-    struct BranchInfo {
-        address branchAddr;
-        address parentToken;
-        address issuer;
-    }
+    address public immutable voteProxyImplementation;
 
     uint256 branchIds;
     uint256 MIN_ISSUE_AMOUNT = 0;
 
-    mapping(uint256 => BranchInfo) branches;
-
-    event SplitBranch(
-        address branchAddr,
-        address parentToken,
-        uint256 amount,
-        address issuer,
-        uint256 branchId
-    );
+    mapping(uint256 => BranchDetail) branches;
 
     constructor() {
+        voteProxyImplementation = address(new VoteProxySigner());
         socotraBranchManagerImplementation = address(
             new SocotraBranchManager()
         );
@@ -56,6 +45,7 @@ contract SocotraFactory {
             Clones.clone(socotraBranchManagerImplementation)
         );
         branch.init(
+            address(this),
             parentToken,
             msg.sender,
             name,
@@ -64,7 +54,7 @@ contract SocotraFactory {
             tokenSymbol
         );
 
-        branches[branchIds] = BranchInfo({
+        branches[branchIds] = BranchDetail({
             branchAddr: address(branch),
             parentToken: parentToken,
             issuer: msg.sender
@@ -81,5 +71,12 @@ contract SocotraFactory {
         return address(branch);
     }
 
-    function createVoteProxy() public {}
+    function createVoteProxy(address issuer) public returns (address) {
+        VoteProxySigner voter = VoteProxySigner(
+            Clones.clone(voteProxyImplementation)
+        );
+        voter.init(msg.sender, issuer);
+        emit CreateVoter(msg.sender, issuer, address(voter));
+        return address(voter);
+    }
 }

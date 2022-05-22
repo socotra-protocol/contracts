@@ -5,7 +5,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IDelegateRegistry.sol";
 import "./SocotraVoteToken.sol";
-import "./VoteProxySigner.sol";
+import "./interfaces/ISocotraFactory.sol";
+import "./interfaces/IVoteProxySigner.sol";
 
 contract SocotraBranchManager is Ownable {
     enum ManagerState {
@@ -42,6 +43,7 @@ contract SocotraBranchManager is Ownable {
         string proof;
         bool isPaid;
     }
+    ISocotraFactory public factory;
 
     ManagerState managerState;
 
@@ -82,6 +84,7 @@ contract SocotraBranchManager is Ownable {
     event IssuePayout(uint256 id);
 
     function init(
+        address _factory,
         address _parentToken,
         address _issuer,
         string memory _name,
@@ -90,6 +93,7 @@ contract SocotraBranchManager is Ownable {
         string memory _tokenSymbol
     ) external {
         require(managerState == ManagerState.NONE, "Already initialized!");
+        factory = ISocotraFactory(_factory);
         branchInfo.parentTokenAddress = _parentToken;
         branchInfo.name = _name;
         branchInfo.imageUrl = _imageUrl;
@@ -123,10 +127,9 @@ contract SocotraBranchManager is Ownable {
     /// @dev create vote proxy contract
     function registerSnapshotVoteProxy() public onlyOwner {
         require(managerState == ManagerState.PENDING, "NOT_PENDING_STATE");
-        VoteProxySigner proxy = new VoteProxySigner(owner());
-        voteProxy = address(proxy);
+        voteProxy = factory.createVoteProxy(owner());
         managerState = ManagerState.READY_OFF_CHAIN;
-        emit ProxyRegistered(address(proxy));
+        emit ProxyRegistered(voteProxy);
     }
 
     /// @dev Update snapshot delegation address
@@ -156,7 +159,7 @@ contract SocotraBranchManager is Ownable {
             uint8(managerState) >= uint8(ManagerState.READY_OFF_CHAIN),
             "NOT_INITIALIZED_VOTER"
         );
-        VoteProxySigner(voteProxy).modifyTeam(member, approval);
+        IVoteProxySigner(voteProxy).modifyTeam(member, approval);
     }
 
     /// @dev Add allocation for member

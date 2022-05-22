@@ -11,19 +11,23 @@ interface Iauction {
 }
 
 contract VoteProxySigner is Ownable, Iauction {
-    enum VoteState {
+    enum VoterState {
         NONE,
         INITIALIZED
     }
+
+    VoterState voterState;
 
     mapping(address => bool) public voter;
 
     event UpdateVoter(address member, bool approval);
 
-    function init(address _owner, address _issuer) public {
+    function init(address _owner, address _issuer) external {
+        require(voterState == VoterState.NONE);
         _transferOwnership(_owner);
         voter[msg.sender] = true;
         voter[_issuer] = true;
+        voterState = VoterState.INITIALIZED;
     }
 
     function bravoCastVote(
